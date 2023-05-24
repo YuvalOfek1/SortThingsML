@@ -48,7 +48,7 @@ def searchDate(checkInDate, checkOutDate):
     search_button.click()
 
 
-url = 'https://www.booking.com/searchresults.html?ss=Berlin&ssne=Berlin&ssne_untouched=Berlin&label=gen173nr-1BCAEoggI46AdIM1gEaGqIAQGYAQ64ARfIAQzYAQHoAQGIAgGoAgO4AoD2taIGwAIB0gIkYjUwNGU2YzctYmIxNS00NDEyLWIwZDMtMjYxN2Y4MDg4YmQ32AIF4AIB&sid=77a53ffe11c95ad4fb890587265110d0&aid=304142&lang=en-us&sb=1&src_elem=sb&src=index&dest_id=-1746443&dest_type=city&checkin=2023-05-08&checkout=2023-05-11&group_adults=2&no_rooms=1&group_children=0&sb_travel_purpose=leisure'
+url = 'https://www.booking.com/searchresults.html?ss=Berlin&ssne=Berlin&ssne_untouched=Berlin&efdco=1&label=gen173nr-1BCAEoggI46AdIM1gEaGqIAQGYAQ64ARfIAQzYAQHoAQGIAgGoAgO4AoD2taIGwAIB0gIkYjUwNGU2YzctYmIxNS00NDEyLWIwZDMtMjYxN2Y4MDg4YmQ32AIF4AIB&sid=77a53ffe11c95ad4fb890587265110d0&aid=304142&lang=en-us&sb=1&src_elem=sb&src=searchresults&dest_id=-1746443&dest_type=city&checkin=2023-05-31&checkout=2023-06-14&group_adults=2&no_rooms=1&group_children=0'
 
 # set up selenium driver
 driver = webdriver.Chrome()
@@ -72,12 +72,21 @@ soup = BeautifulSoup(html_source, "html.parser")
 # searchDate("2023-07-22", "2023-10-15")
 
 # time.sleep(10)
+file_path = 'C:\\Users\\Yuval\\Desktop\\אקדמיה\\B.sc CS COLMAN\\תכנית מצטיינים\\HotelsHTMLSource'  # Replace with your desired file path
+
 
 property_cards = soup.find_all('div', {'data-testid': 'property-card'})
 links = []
 for card in property_cards:
     links.append(card.find('a', {'data-testid': 'title-link'})['href'])
 
+i=1
 for link in links:
     driver.get(link)
-    time.sleep(2)
+    time.sleep(3)
+    html_hotel_source = driver.page_source
+    print(i)
+    with open(file_path+f'/Berlin_index_{i}_1-2-22_2-2-22.html', 'w', encoding='utf-8') as file:
+        file.write(html_hotel_source)
+    i=i+1
+
