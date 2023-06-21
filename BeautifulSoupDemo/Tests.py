@@ -1,11 +1,4 @@
-import os
 import time
-import random as ran
-import sys
-
-import codecs
-import requests
-import re
 import os
 from selenium import webdriver
 from selenium.common import NoSuchElementException, ElementClickInterceptedException
@@ -99,35 +92,10 @@ def generate_date_tuples(date_str):
     return date_tuples
 
 
-url = 'https://www.booking.com/searchresults.html?ss=Berlin%2C+Berlin+Federal+State%2C+Germany&ssne=Dafna&ssne_untouched=Dafna&label=gen173nr-1FCAEoggI46AdIM1gEaGqIAQGYATG4ARfIAQzYAQHoAQH4AQOIAgGoAgO4Av6myqQGwAIB0gIkN2NiZTVhMWEtNjdiNy00ODA4LTllNzEtZTQ2ZTVjN2NhYjYz2AIF4AIB&aid=304142&lang=en-us&sb=1&src_elem=sb&src=index&dest_id=-1746443&dest_type=city&ac_position=0&ac_click_type=b&ac_langcode=en&ac_suggestion_list_length=5&search_selected=true&search_pageview_id=92ee2aff31a3024e&ac_meta=GhA5MmVlMmFmZjMxYTMwMjRlIAAoATICZW46BmJlcmxpbkAASgBQAA%3D%3D&checkin=2023-06-30&checkout=2023-07-27&group_adults=2&no_rooms=1&group_children=0&sb_travel_purpose=leisure'
-
-# set up selenium driver
-driver = webdriver.Chrome()
-driver.get(url)
-
-# set implicit wait time to 2 seconds
-driver.implicitly_wait(2)
-
-# wait until the element with ID "my_element" is present
-element_present = EC.presence_of_element_located(
-    (By.CLASS_NAME, "a826ba81c4"))  # the first class of the property card
-WebDriverWait(driver, timeout=10).until(element_present)
-
-# now that the element is present, get the page source
-html_source = driver.page_source
-
-# use BeautifulSoup to parse the (MAIN PAGE) page source and extract the data you need
-soup = BeautifulSoup(html_source, "html.parser")
-
-# searchDate("2023-07-22", "2023-10-15")
-
-
-# time.sleep(10)
-
-
+# Save the html source from each link to a desired file path
 def save_data_from_search_results(date):
     file_path = r"C:\Users\liavb\Desktop\SortThingsML\data" # Replace with your desired file path
-    folder_name = f"{date[0]}___{date[1]}"
+    folder_name = f"{date[0]}---{date[1]}"
     folder_path = os.path.join(file_path, folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
@@ -149,6 +117,8 @@ def save_data_from_search_results(date):
         i += 1
 
 
+# Main scrape loop for the relevant dates starting from today.
+# While loop is used to search the current dates incase the popup interfered while trying to search.
 def scrape():
     today = datetime.today()
     date_string = today.strftime("%Y-%m-%d")
@@ -169,5 +139,15 @@ def scrape():
                 button.click()
                 print('pop up but continued')
 
+
+# Default URL - where we start scraping
+url = 'https://www.booking.com/searchresults.html?ss=Berlin%2C+Berlin+Federal+State%2C+Germany&ssne=Dafna&ssne_untouched=Dafna&label=gen173nr-1FCAEoggI46AdIM1gEaGqIAQGYATG4ARfIAQzYAQHoAQH4AQOIAgGoAgO4Av6myqQGwAIB0gIkN2NiZTVhMWEtNjdiNy00ODA4LTllNzEtZTQ2ZTVjN2NhYjYz2AIF4AIB&aid=304142&lang=en-us&sb=1&src_elem=sb&src=index&dest_id=-1746443&dest_type=city&ac_position=0&ac_click_type=b&ac_langcode=en&ac_suggestion_list_length=5&search_selected=true&search_pageview_id=92ee2aff31a3024e&ac_meta=GhA5MmVlMmFmZjMxYTMwMjRlIAAoATICZW46BmJlcmxpbkAASgBQAA%3D%3D&checkin=2023-06-30&checkout=2023-07-27&group_adults=2&no_rooms=1&group_children=0&sb_travel_purpose=leisure'
+
+# set up selenium driver
+driver = webdriver.Chrome()
+driver.get(url)
+
+# set implicit wait time to 2 seconds
+driver.implicitly_wait(2)
 
 scrape()
