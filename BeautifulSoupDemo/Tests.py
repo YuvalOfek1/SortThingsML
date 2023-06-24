@@ -2,23 +2,78 @@ import time
 import os
 from selenium import webdriver
 from selenium.common import NoSuchElementException, ElementClickInterceptedException
+from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
+citiesList = ['New York', 'Berlin', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas', 'Miami', 'San Francisco']
+propertyCardData = [
+    ('div', {'data-testid': 'title'}),
+    ('span', {'data-testid': 'address'}),
+    ('span', {'data-testid': 'distance'}),
+    ('div', {'data-testid': 'review-score'}),
+    ('div', {'data-testid': 'availability-rate-information'}),
+    ('div', {'data-testid': 'recommended-units'}),
+    ('div', {'data-testid': 'rating-stars'}), #todo: find how many spans are inside this div (the stars);
+    ('span', {'class': 'e2f34d59b1'}), ## maybe class_= (newToBooking)
 
-def searchDate(checkInDate, checkOutDate):
+
+
+]
+
+def getPropertyCardDetails(card):
+    name = card.find(propertyCardData[0][0], propertyCardData[0][1])
+    address = card.find(propertyCardData[1][0], propertyCardData[1][1])
+    distance = card.find(propertyCardData[2][0], propertyCardData[2][1])
+    numOfReviews = card.find(propertyCardData[3][0], propertyCardData[3][1])
+    xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1])
+    extras = card.find(propertyCardData[5][0], propertyCardData[5][1])
+    newToBooking = card.find(propertyCardData[6][0], propertyCardData[6][1])
+    # price = card.find('span', {'data-testid': 'price-and-discounted-price'})
+    # taxesAndCharges = card.find('div', {'data-testid': 'taxes-and-charges'})
+
+    result = ''
+    result+= f'Name: {name.text.strip()}\n'
+    result += f'Address: {address.text.strip()}\n'
+    result += f'Distance from Center: {distance.text.strip()}\n'
+    if newToBooking and newToBooking.text == "New to Booking.com":
+        result += 'New to Booking.com\n'
+    result += f'Reviews: {numOfReviews.text}\n' if numOfReviews else '\t Reviews: No reviews yet\n'
+    result += f'Extras: {extras.text}\n' if extras else '\t Extras: No extras\n'
+    result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else '\t Nights and people: No info\n'
+    #result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
+    #result += f'Taxes and charges: {taxesAndCharges.text.strip()}\n' if taxesAndCharges else '\t Taxes and charges: No info\n'
+    result += "----------------------------------------------\n"
+
+    return result
+
+
+def searchDate(checkInDate, checkOutDate, cityToSearch):
     searchbox_present = EC.presence_of_element_located(
         (By.CLASS_NAME, "d47738b911"))  # the first search box
     WebDriverWait(driver, timeout=10).until(searchbox_present)
 
     check_in_button = driver.find_element(By.XPATH, "//*[@data-testid='date-display-field-start']")
     check_out_button = driver.find_element(By.XPATH, "//*[@data-testid='date-display-field-end']")
+
+    #get the city selection input element -> ckear its value and write our city
+    input_element = driver.find_element(By.XPATH, "//input[@id=':Ra9:']")
+    input_element.send_keys(Keys.CONTROL + "a")  # Select all text
+    input_element.send_keys(Keys.BACKSPACE)
+    input_element.send_keys(cityToSearch)
+    ul_element = driver.find_element(By.XPATH, '//ul[@data-testid="autocomplete-results"]') # the autocomplete list of cities
+    time.sleep(1.5)
+    li_element = ul_element.find_element(By.TAG_NAME, "li")
+    li_element.click()
+    input_element.click()
+    print('succeeded to click on city')
+
     check_in_button.click()
 
+    #keep advance the dates untill we fint the desire month.
     while True:
         try:
             check_in_date = driver.find_element(By.XPATH, f"//*[@data-date='{checkInDate}']")
@@ -93,24 +148,33 @@ def generate_date_tuples(date_str):
 
 
 # Save the html source from each link to a desired file path
-def save_data_from_search_results(date):
-    file_path = r"C:\Users\liavb\Desktop\SortThingsML\data" # Replace with your desired file path
+def save_data_from_search_results(date, city):
+    file_path = r"C:\Users\Yuval\Desktop\אקדמיה\B.sc CS COLMAN\תכנית מצטיינים\HotelsHTMLSource" # Replace with your desired file path
+    city_folder_path = os.path.join(file_path, city)
+    os.makedirs(city_folder_path, exist_ok=True)
     folder_name = f"{date[0]}---{date[1]}"
-    folder_path = os.path.join(file_path, folder_name)
+    folder_path = os.path.join(city_folder_path, folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
     property_cards = soup.find_all('div', {'data-testid': 'property-card'})
     links = []
-    for card in property_cards:
+    for index, card in enumerate(property_cards):
         links.append(card.find('a', {'data-testid': 'title-link'})['href'])
+        tags_file = f'index_{index+1}_property_card.txt'
+        file_path = os.path.join(folder_path, tags_file)
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(getPropertyCardDetails(card))
+
+
+
 
     i = 1
-    for link in links[:2]:
+    for link in links[:1]:
         driver.get(link)
         time.sleep(1)
         html_hotel_source = driver.page_source
-        file_name = f'Berlin_index_{i}_{date[0]}_{date[1]}.html'
+        file_name = f'index_{i}.html'
         file_path = os.path.join(folder_path, file_name)
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(html_hotel_source)
@@ -120,28 +184,29 @@ def save_data_from_search_results(date):
 # Main scrape loop for the relevant dates starting from today.
 # While loop is used to search the current dates incase the popup interfered while trying to search.
 def scrape():
+
     today = datetime.today()
     date_string = today.strftime("%Y-%m-%d")
     dates = generate_date_tuples(date_string)
-
-    for date in dates:
-        # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
-        driver.get(url)
-        pop_up = True
-        while pop_up:
-            try:
-                searchDate(date[0], date[1])
-                save_data_from_search_results(date)
-                pop_up = False
-            except ElementClickInterceptedException:
-                button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
-                button = driver.find_element(By.XPATH, button_xpath)
-                button.click()
-                print('pop up but continued')
+    for city in citiesList:
+        for date in dates[:1]:
+            # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
+            driver.get(url)
+            pop_up = True
+            while pop_up:
+                try:
+                    searchDate(date[0], date[1], city)
+                    save_data_from_search_results(date, city)
+                    pop_up = False
+                except ElementClickInterceptedException:
+                    button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
+                    button = driver.find_element(By.XPATH, button_xpath)
+                    button.click()
+                    print('pop up but continued')
 
 
 # Default URL - where we start scraping
-url = 'https://www.booking.com/searchresults.html?ss=Berlin%2C+Berlin+Federal+State%2C+Germany&ssne=Dafna&ssne_untouched=Dafna&label=gen173nr-1FCAEoggI46AdIM1gEaGqIAQGYATG4ARfIAQzYAQHoAQH4AQOIAgGoAgO4Av6myqQGwAIB0gIkN2NiZTVhMWEtNjdiNy00ODA4LTllNzEtZTQ2ZTVjN2NhYjYz2AIF4AIB&aid=304142&lang=en-us&sb=1&src_elem=sb&src=index&dest_id=-1746443&dest_type=city&ac_position=0&ac_click_type=b&ac_langcode=en&ac_suggestion_list_length=5&search_selected=true&search_pageview_id=92ee2aff31a3024e&ac_meta=GhA5MmVlMmFmZjMxYTMwMjRlIAAoATICZW46BmJlcmxpbkAASgBQAA%3D%3D&checkin=2023-06-30&checkout=2023-07-27&group_adults=2&no_rooms=1&group_children=0&sb_travel_purpose=leisure'
+url = 'https://www.booking.com/'
 
 # set up selenium driver
 driver = webdriver.Chrome()
