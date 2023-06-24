@@ -1,8 +1,0 @@
-Name: Hotel Paba
-Address: Rione Monti, Rome
-Distance from Center: 0.7 km from center
-Reviews: 8.9Excellent 395 reviews
-	 Extras: No extras
-Nights and people: 1 night, 2 adults
-Stars: 2 out of 5
-----------------------------------------------

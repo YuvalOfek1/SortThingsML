@@ -1,8 +1,0 @@
-Name: The FIDI Hotel
-Address: Wall Street - Financial District, New York
-Distance from Center: 7.6 km from center
-Reviews: 8.3Very Good 295 reviews
-	 Extras: No extras
-Nights and people: 1 night, 2 adults
-Stars: 4 out of 5
-----------------------------------------------

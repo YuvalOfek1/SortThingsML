@@ -1,7 +1,0 @@
-Name: NikHouse
-Address: Vaticano Prati, Rome
-Distance from Center: 3.5 km from center
-Reviews: 9.5Exceptional 4 reviews
-	 Extras: No extras
-Nights and people: 1 night, 2 adults
-----------------------------------------------

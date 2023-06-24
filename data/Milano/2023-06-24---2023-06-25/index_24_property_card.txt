@@ -1,8 +1,0 @@
-Name: Hotel Fenice
-Address: Milan City Center, Milan
-Distance from Center: 1.8 km from center
-Reviews: 8.1Very Good 2,608 reviews
-	 Extras: No extras
-Nights and people: 1 night, 2 adults
-Stars: 3 out of 5
-----------------------------------------------
