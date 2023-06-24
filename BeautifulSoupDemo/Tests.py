@@ -9,20 +9,22 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-citiesList = ['New York', 'Berlin', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas', 'Miami', 'San Francisco']
+citiesList = ['Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
+              'Miami', 'San Francisco']
 propertyCardData = [
     ('div', {'data-testid': 'title'}),
     ('span', {'data-testid': 'address'}),
     ('span', {'data-testid': 'distance'}),
     ('div', {'data-testid': 'review-score'}),
-    ('div', {'data-testid': 'availability-rate-information'}),
-    ('div', {'data-testid': 'recommended-units'}),
-    ('div', {'data-testid': 'rating-stars'}), #todo: find how many spans are inside this div (the stars);
-    ('span', {'class': 'e2f34d59b1'}), ## maybe class_= (newToBooking)
-
-
-
+    # ('div', {'data-testid': 'availability-rate-information'}),
+    ('div', {'data-testid': 'price-for-x-nights'}),  # x nights y adults
+    ('div', {'data-testid': 'price-and-discounted-price'}),  # price
+    ('div', {'data-testid': 'taxes-and-charges'}),  # taxes-and-charges
+    ('div', {'class': 'e4755bbd60'}),  # x out of 5
+    # ('div', {'data-testid': 'recommended-units'}),
+    # ('span', {'class': 'e2f34d59b1'}),  ## maybe class_= (newToBooking)
 ]
+
 
 def getPropertyCardDetails(card):
     name = card.find(propertyCardData[0][0], propertyCardData[0][1])
@@ -32,11 +34,12 @@ def getPropertyCardDetails(card):
     xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1])
     extras = card.find(propertyCardData[5][0], propertyCardData[5][1])
     newToBooking = card.find(propertyCardData[6][0], propertyCardData[6][1])
+    stars = card.find(propertyCardData[7][0], propertyCardData[7][1])
     # price = card.find('span', {'data-testid': 'price-and-discounted-price'})
     # taxesAndCharges = card.find('div', {'data-testid': 'taxes-and-charges'})
 
     result = ''
-    result+= f'Name: {name.text.strip()}\n'
+    result += f'Name: {name.text.strip()}\n'
     result += f'Address: {address.text.strip()}\n'
     result += f'Distance from Center: {distance.text.strip()}\n'
     if newToBooking and newToBooking.text == "New to Booking.com":
@@ -44,8 +47,12 @@ def getPropertyCardDetails(card):
     result += f'Reviews: {numOfReviews.text}\n' if numOfReviews else '\t Reviews: No reviews yet\n'
     result += f'Extras: {extras.text}\n' if extras else '\t Extras: No extras\n'
     result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else '\t Nights and people: No info\n'
-    #result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
-    #result += f'Taxes and charges: {taxesAndCharges.text.strip()}\n' if taxesAndCharges else '\t Taxes and charges: No info\n'
+    if stars:
+        result += f'Stars: {stars.attrs["aria-label"]}\n'
+
+    # Circles?
+    # result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
+    # result += f'Taxes and charges: {taxesAndCharges.text.strip()}\n' if taxesAndCharges else '\t Taxes and charges: No info\n'
     result += "----------------------------------------------\n"
 
     return result
@@ -59,12 +66,13 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
     check_in_button = driver.find_element(By.XPATH, "//*[@data-testid='date-display-field-start']")
     check_out_button = driver.find_element(By.XPATH, "//*[@data-testid='date-display-field-end']")
 
-    #get the city selection input element -> ckear its value and write our city
+    # get the city selection input element -> clear its value and write our city
     input_element = driver.find_element(By.XPATH, "//input[@id=':Ra9:']")
     input_element.send_keys(Keys.CONTROL + "a")  # Select all text
     input_element.send_keys(Keys.BACKSPACE)
     input_element.send_keys(cityToSearch)
-    ul_element = driver.find_element(By.XPATH, '//ul[@data-testid="autocomplete-results"]') # the autocomplete list of cities
+    ul_element = driver.find_element(By.XPATH,
+                                     '//ul[@data-testid="autocomplete-results"]')  # the autocomplete list of cities
     time.sleep(1.5)
     li_element = ul_element.find_element(By.TAG_NAME, "li")
     li_element.click()
@@ -73,7 +81,7 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
 
     check_in_button.click()
 
-    #keep advance the dates untill we fint the desire month.
+    # keep advance the dates untill we fint the desire month.
     while True:
         try:
             check_in_date = driver.find_element(By.XPATH, f"//*[@data-date='{checkInDate}']")
@@ -107,6 +115,7 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
                                             and "//*[@class='fc63351294 a822bdf511 d4b6b7a9e7 f7db01295e c938084447 f4605622ad c827b27356']")
     search_button.click()
 
+
 """
 # Given a date of "yyyy-mm-dd" returns a list of tuples:
     Example:
@@ -118,6 +127,8 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
         #          ('2023-07-14', '2023-06-15'), ('2023-07-14', '2023-06-16'), ('2023-07-14', '2023-06-17'), ('2023-07-14', '2023-06-18')]
 
     """
+
+
 def generate_date_tuples(date_str):
     # Convert date string to datetime object
     date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -149,8 +160,9 @@ def generate_date_tuples(date_str):
 
 # Save the html source from each link to a desired file path
 def save_data_from_search_results(date, city):
-    file_path = r"C:\Users\Yuval\Desktop\אקדמיה\B.sc CS COLMAN\תכנית מצטיינים\HotelsHTMLSource" # Replace with your desired file path
-    city_folder_path = os.path.join(file_path, city)
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    data_directory = os.path.join(current_directory, '../Data')
+    city_folder_path = os.path.join(data_directory, city)
     os.makedirs(city_folder_path, exist_ok=True)
     folder_name = f"{date[0]}---{date[1]}"
     folder_path = os.path.join(city_folder_path, folder_name)
@@ -161,13 +173,10 @@ def save_data_from_search_results(date, city):
     links = []
     for index, card in enumerate(property_cards):
         links.append(card.find('a', {'data-testid': 'title-link'})['href'])
-        tags_file = f'index_{index+1}_property_card.txt'
+        tags_file = f'index_{index + 1}_property_card.txt'
         file_path = os.path.join(folder_path, tags_file)
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(getPropertyCardDetails(card))
-
-
-
 
     i = 1
     for link in links[:1]:
@@ -184,7 +193,6 @@ def save_data_from_search_results(date, city):
 # Main scrape loop for the relevant dates starting from today.
 # While loop is used to search the current dates incase the popup interfered while trying to search.
 def scrape():
-
     today = datetime.today()
     date_string = today.strftime("%Y-%m-%d")
     dates = generate_date_tuples(date_string)
