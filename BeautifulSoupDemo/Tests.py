@@ -8,8 +8,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+import re
 
-citiesList = ['Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
+citiesList = ['Hanoi', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
               'Miami', 'San Francisco']
 propertyCardData = [
     ('div', {'data-testid': 'title'}),
@@ -17,37 +18,41 @@ propertyCardData = [
     ('span', {'data-testid': 'distance'}),
     ('div', {'data-testid': 'review-score'}),
     # ('div', {'data-testid': 'availability-rate-information'}),
-    ('div', {'data-testid': 'price-for-x-nights'}),  #nights and adults: x nights y adults
+    ('div', {'data-testid': 'price-for-x-nights'}),  # nights and adults: x nights y adults
     ('div', {'data-testid': 'price-and-discounted-price'}),  # price
     ('div', {'data-testid': 'taxes-and-charges'}),  # taxes-and-charges
-    ('div', {'class': 'e4755bbd60'}),  #stars: x out of 5
+    ('div', {'class': 'e4755bbd60'}),  # stars: x out of 5
     # ('div', {'data-testid': 'recommended-units'}),
-    # ('span', {'class': 'e2f34d59b1'}),  ## maybe class_= (newToBooking)
+    ('span', {'class': 'e2f34d59b1'}),  # promotional stuff (newToBooking, getawayDeal, promoted, sustainability etc...)
+    ('a', {'data-testid': 'secondary-review-score-link'}), # location: rank
 ]
 
 
 def getPropertyCardDetails(card):
-    name = card.find(propertyCardData[0][0], propertyCardData[0][1])
-    address = card.find(propertyCardData[1][0], propertyCardData[1][1])
-    distance = card.find(propertyCardData[2][0], propertyCardData[2][1])
-    numOfReviews = card.find(propertyCardData[3][0], propertyCardData[3][1])
-    xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1])
-    extras = card.find(propertyCardData[5][0], propertyCardData[5][1])
-    newToBooking = card.find(propertyCardData[6][0], propertyCardData[6][1])
-    stars = card.find(propertyCardData[7][0], propertyCardData[7][1])
+    name = card.find(propertyCardData[0][0], propertyCardData[0][1]) # title
+    address = card.find(propertyCardData[1][0], propertyCardData[1][1]) # address
+    distance = card.find(propertyCardData[2][0], propertyCardData[2][1]) # distance
+    locationRank =  card.find(propertyCardData[9][0], propertyCardData[9][1])
+    numOfReviews = card.find(propertyCardData[3][0], propertyCardData[3][1]) # review-score
+    xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1]) # price-for-x-nights
+    extras = card.find(propertyCardData[5][0], propertyCardData[5][1]) #
+    stars = card.find(propertyCardData[7][0], propertyCardData[7][1]) # class: e4755bbd60
     # price = card.find('span', {'data-testid': 'price-and-discounted-price'})
     # taxesAndCharges = card.find('div', {'data-testid': 'taxes-and-charges'})
+    promotionalStuff = card.findAll(propertyCardData[8][0], propertyCardData[8][1])
 
     result = ''
     result += f'Name: {name.text.strip()}\n'
     result += f'Address: {address.text.strip()}\n'
     result += f'Distance from Center: {distance.text.strip()}\n'
-    if newToBooking and newToBooking.text == "New to Booking.com":
-        result += 'New to Booking.com\n'
-    result += f'Reviews: {numOfReviews.text}\n' if numOfReviews else 'Reviews: No reviews yet\n'
-    result += f'Extras: {extras.text}\n' if extras else 'Extras: No extras\n'
-    result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else 'Nights and people: No info\n'
-    result += f'Stars: {stars.attrs["aria-label"]}\n' if stars else 'Stars: unranked\n'
+    for i in range(0, len(promotionalStuff)):
+        result += f'Promotional Stuff: {promotionalStuff[i].text}\n' if promotionalStuff[i] else ''
+    numOfReviewsSplittedText = re.sub(r'(\d+(\.\d+)?)([A-Za-z]+)', r'\1 \3', numOfReviews.text)
+    result += f'Reviews: {numOfReviewsSplittedText}\n' if numOfReviews else 'Reviews: No reviews yet\n'
+    result += f'{locationRank.attrs["aria-label"]}\n' if locationRank else ""
+    result += f'Extras: {extras.text}\n' if extras else ''
+    result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else ''
+    result += f'Stars: {stars.attrs["aria-label"]}\n' if stars else 'Stars: Unranked\n'
 
     # Circles?
     # result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
