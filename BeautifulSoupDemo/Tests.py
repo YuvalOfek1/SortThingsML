@@ -17,10 +17,10 @@ propertyCardData = [
     ('span', {'data-testid': 'distance'}),
     ('div', {'data-testid': 'review-score'}),
     # ('div', {'data-testid': 'availability-rate-information'}),
-    ('div', {'data-testid': 'price-for-x-nights'}),  # x nights y adults
+    ('div', {'data-testid': 'price-for-x-nights'}),  #nights and adults: x nights y adults
     ('div', {'data-testid': 'price-and-discounted-price'}),  # price
     ('div', {'data-testid': 'taxes-and-charges'}),  # taxes-and-charges
-    ('div', {'class': 'e4755bbd60'}),  # x out of 5
+    ('div', {'class': 'e4755bbd60'}),  #stars: x out of 5
     # ('div', {'data-testid': 'recommended-units'}),
     # ('span', {'class': 'e2f34d59b1'}),  ## maybe class_= (newToBooking)
 ]
@@ -44,11 +44,10 @@ def getPropertyCardDetails(card):
     result += f'Distance from Center: {distance.text.strip()}\n'
     if newToBooking and newToBooking.text == "New to Booking.com":
         result += 'New to Booking.com\n'
-    result += f'Reviews: {numOfReviews.text}\n' if numOfReviews else '\t Reviews: No reviews yet\n'
-    result += f'Extras: {extras.text}\n' if extras else '\t Extras: No extras\n'
-    result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else '\t Nights and people: No info\n'
-    if stars:
-        result += f'Stars: {stars.attrs["aria-label"]}\n'
+    result += f'Reviews: {numOfReviews.text}\n' if numOfReviews else 'Reviews: No reviews yet\n'
+    result += f'Extras: {extras.text}\n' if extras else 'Extras: No extras\n'
+    result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else 'Nights and people: No info\n'
+    result += f'Stars: {stars.attrs["aria-label"]}\n' if stars else 'Stars: unranked\n'
 
     # Circles?
     # result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
