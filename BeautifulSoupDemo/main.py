@@ -10,8 +10,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 
-citiesList = ['Hanoi', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
-              'Miami', 'San Francisco']
+citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
+              'Miami', 'San Francisco', 'Hanoi']
 propertyCardData = [
     ('div', {'data-testid': 'title'}),
     ('span', {'data-testid': 'address'}),
@@ -25,6 +25,9 @@ propertyCardData = [
     # ('div', {'data-testid': 'recommended-units'}),
     ('span', {'class': 'e2f34d59b1'}),  # promotional stuff (newToBooking, getawayDeal, promoted, sustainability etc...)
     ('a', {'data-testid': 'secondary-review-score-link'}), # location: rank
+    ('div', {'data-testid': 'rating-circles'}), # circles: aria-label x out of 5
+    ('span', {'data-testid': 'preferred-badge'}), #preferred badge - the 'thumb' badge
+    ('div', {'data-testid': 'notices-container'}) #notice container on the page
 ]
 
 
@@ -40,6 +43,9 @@ def getPropertyCardDetails(card):
     # price = card.find('span', {'data-testid': 'price-and-discounted-price'})
     # taxesAndCharges = card.find('div', {'data-testid': 'taxes-and-charges'})
     promotionalStuff = card.findAll(propertyCardData[8][0], propertyCardData[8][1])
+    circles = card.find(propertyCardData[10][0], propertyCardData[10][1])
+    preferredBadge = card.find(propertyCardData[11][0], propertyCardData[11][1])
+
 
     result = ''
     result += f'Name: {name.text.strip()}\n'
@@ -47,17 +53,19 @@ def getPropertyCardDetails(card):
     result += f'Distance from Center: {distance.text.strip()}\n'
     for i in range(0, len(promotionalStuff)):
         result += f'Promotional Stuff: {promotionalStuff[i].text}\n' if promotionalStuff[i] else ''
-    numOfReviewsSplittedText = re.sub(r'(\d+(\.\d+)?)([A-Za-z]+)', r'\1 \3', numOfReviews.text)
+    if numOfReviews:
+        numOfReviewsSplittedText = re.sub(r'(\d+(\.\d+)?)([A-Za-z]+)', r'\1 \3', numOfReviews.text)
     result += f'Reviews: {numOfReviewsSplittedText}\n' if numOfReviews else 'Reviews: No reviews yet\n'
     result += f'{locationRank.attrs["aria-label"]}\n' if locationRank else ""
     result += f'Extras: {extras.text}\n' if extras else ''
     result += f'Nights and people: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else ''
     result += f'Stars: {stars.attrs["aria-label"]}\n' if stars else 'Stars: Unranked\n'
+    result += f'Circles: {len(circles.contents)} out of 5\n' if circles else 'Circles: Unranked\n'
+    result += f'Preffered Badge (thumb): True' if preferredBadge else f'Preffered Badge (thumb): False'
 
     # Circles?
     # result += f'Price: {price.text.strip()}\n' if price else '\t Price: No price\n'
     # result += f'Taxes and charges: {taxesAndCharges.text.strip()}\n' if taxesAndCharges else '\t Taxes and charges: No info\n'
-    result += "----------------------------------------------\n"
 
     return result
 
@@ -164,16 +172,30 @@ def generate_date_tuples(date_str):
 
 # Save the html source from each link to a desired file path
 def save_data_from_search_results(date, city):
+    today = datetime.today()
+    date_string = today.strftime("%d-%m-%Y")
+    fDate = (datetime.strptime(date[0], '%Y-%m-%d').strftime('%d-%m-%Y'),
+             datetime.strptime(date[1], '%Y-%m-%d').strftime('%d-%m-%Y'))
+
+
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    data_directory = os.path.join(current_directory, '../Data')
+    data_directory = os.path.join(current_directory, f'../Data/{date_string}')
     city_folder_path = os.path.join(data_directory, city)
     os.makedirs(city_folder_path, exist_ok=True)
-    folder_name = f"{date[0]}---{date[1]}"
+    folder_name = f"{fDate[0]}---{fDate[1]}"
     folder_path = os.path.join(city_folder_path, folder_name)
     os.makedirs(folder_path, exist_ok=True)
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
     property_cards = soup.find_all('div', {'data-testid': 'property-card'})
+    noticesContainer = soup.find(propertyCardData[12][0], propertyCardData[12][1])
+    notices_file = 'Notices.txt'
+    file_path = os.path.join(folder_path, notices_file)
+    if noticesContainer:
+        with open(file_path, 'a', encoding='utf-8') as file:
+            for notice in noticesContainer.contents:
+                file.write(f'• {notice.text}\n')
+
     links = []
     for index, card in enumerate(property_cards):
         links.append(card.find('a', {'data-testid': 'title-link'})['href'])
@@ -183,7 +205,7 @@ def save_data_from_search_results(date, city):
             file.write(getPropertyCardDetails(card))
 
     i = 1
-    for link in links[:1]:
+    for link in links:
         driver.get(link)
         time.sleep(1)
         html_hotel_source = driver.page_source
@@ -197,11 +219,11 @@ def save_data_from_search_results(date, city):
 # Main scrape loop for the relevant dates starting from today.
 # While loop is used to search the current dates incase the popup interfered while trying to search.
 def scrape():
-    today = datetime.today()
-    date_string = today.strftime("%Y-%m-%d")
+    initDate = datetime.today() + timedelta(days=1) #we start to search from tomorrow bcz GMT problems
+    date_string = initDate.strftime("%Y-%m-%d")
     dates = generate_date_tuples(date_string)
     for city in citiesList:
-        for date in dates[:1]:
+        for date in dates:
             # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
             driver.get(url)
             pop_up = True
