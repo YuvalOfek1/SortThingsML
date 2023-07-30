@@ -1,3 +1,4 @@
+import threading
 import time
 import os
 from selenium import webdriver
@@ -10,7 +11,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 
-citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Las Vegas',
+citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona',
+              'Las Vegas',
               'Miami', 'San Francisco', 'Hanoi']
 propertyCardData = [
     ('div', {'data-testid': 'title'}),
@@ -24,28 +26,27 @@ propertyCardData = [
     ('div', {'class': 'e4755bbd60'}),  # stars: x out of 5
     # ('div', {'data-testid': 'recommended-units'}),
     ('span', {'class': 'e2f34d59b1'}),  # promotional stuff (newToBooking, getawayDeal, promoted, sustainability etc...)
-    ('a', {'data-testid': 'secondary-review-score-link'}), # location: rank
-    ('div', {'data-testid': 'rating-circles'}), # circles: aria-label x out of 5
-    ('span', {'data-testid': 'preferred-badge'}), #preferred badge - the 'thumb' badge
-    ('div', {'data-testid': 'notices-container'}) #notice container on the page
+    ('a', {'data-testid': 'secondary-review-score-link'}),  # location: rank
+    ('div', {'data-testid': 'rating-circles'}),  # circles: aria-label x out of 5
+    ('span', {'data-testid': 'preferred-badge'}),  # preferred badge - the 'thumb' badge
+    ('div', {'data-testid': 'notices-container'})  # notice container on the page
 ]
 
 
 def getPropertyCardDetails(card):
-    name = card.find(propertyCardData[0][0], propertyCardData[0][1]) # title
-    address = card.find(propertyCardData[1][0], propertyCardData[1][1]) # address
-    distance = card.find(propertyCardData[2][0], propertyCardData[2][1]) # distance
-    locationRank =  card.find(propertyCardData[9][0], propertyCardData[9][1])
-    numOfReviews = card.find(propertyCardData[3][0], propertyCardData[3][1]) # review-score
-    xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1]) # price-for-x-nights
-    extras = card.find(propertyCardData[5][0], propertyCardData[5][1]) #
-    stars = card.find(propertyCardData[7][0], propertyCardData[7][1]) # class: e4755bbd60
+    name = card.find(propertyCardData[0][0], propertyCardData[0][1])  # title
+    address = card.find(propertyCardData[1][0], propertyCardData[1][1])  # address
+    distance = card.find(propertyCardData[2][0], propertyCardData[2][1])  # distance
+    locationRank = card.find(propertyCardData[9][0], propertyCardData[9][1])
+    numOfReviews = card.find(propertyCardData[3][0], propertyCardData[3][1])  # review-score
+    xNightsAndAdults = card.find(propertyCardData[4][0], propertyCardData[4][1])  # price-for-x-nights
+    extras = card.find(propertyCardData[5][0], propertyCardData[5][1])  #
+    stars = card.find(propertyCardData[7][0], propertyCardData[7][1])  # class: e4755bbd60
     # price = card.find('span', {'data-testid': 'price-and-discounted-price'})
     # taxesAndCharges = card.find('div', {'data-testid': 'taxes-and-charges'})
     promotionalStuff = card.findAll(propertyCardData[8][0], propertyCardData[8][1])
     circles = card.find(propertyCardData[10][0], propertyCardData[10][1])
     preferredBadge = card.find(propertyCardData[11][0], propertyCardData[11][1])
-
 
     result = ''
     result += f'Name: {name.text.strip()}\n'
@@ -93,7 +94,17 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
 
     check_in_button.click()
 
-    # keep advance the dates untill we fint the desire month.
+    # Reset the searchbox all the way to the left (fix for the bug where we couldn't find the correct dates after
+    # completing a city and searching for a new city.
+    try:
+        while True:
+            prev_month_button = driver.find_element(By.XPATH, "//*[@type='button']"
+                                                    and "//*[@class='fc63351294 a822bdf511 e3c025e003 fa565176a8 cfb238afa1 c334e6f658 ae1678b153 c9fa5fc96d ab15620a33']")
+            prev_month_button.click()
+    except NoSuchElementException:
+        pass
+
+    # keep advance the dates until we find the desire month.
     while True:
         try:
             check_in_date = driver.find_element(By.XPATH, f"//*[@data-date='{checkInDate}']")
@@ -171,72 +182,127 @@ def generate_date_tuples(date_str):
 
 
 # Save the html source from each link to a desired file path
-def save_data_from_search_results(date, city):
+# def save_data_from_search_results(date, city):
+#     today = datetime.today()
+#     date_string = today.strftime("%d-%m-%Y")
+#     fDate = (datetime.strptime(date[0], '%Y-%m-%d').strftime('%d-%m-%Y'),
+#              datetime.strptime(date[1], '%Y-%m-%d').strftime('%d-%m-%Y'))
+#
+#     current_directory = os.path.dirname(os.path.abspath(__file__))
+#     data_directory = os.path.join(current_directory, f'../Data/{date_string}')
+#     city_folder_path = os.path.join(data_directory, city)
+#     os.makedirs(city_folder_path, exist_ok=True)
+#     folder_name = f"{fDate[0]}---{fDate[1]}"
+#     folder_path = os.path.join(city_folder_path, folder_name)
+#     os.makedirs(folder_path, exist_ok=True)
+#
+#     soup = BeautifulSoup(driver.page_source, "html.parser")
+#     property_cards = soup.find_all('div', {'data-testid': 'property-card'})
+#     noticesContainer = soup.find(propertyCardData[12][0], propertyCardData[12][1])
+#     notices_file = 'Notices.txt'
+#     file_path = os.path.join(folder_path, notices_file)
+#     if noticesContainer:
+#         with open(file_path, 'a', encoding='utf-8') as file:
+#             for notice in noticesContainer.contents:
+#                 file.write(f'• {notice.text}\n')
+#
+#     links = []
+#     for index, card in enumerate(property_cards):
+#         links.append(card.find('a', {'data-testid': 'title-link'})['href'])
+#         tags_file = f'index_{index + 1}_property_card.txt'
+#         file_path = os.path.join(folder_path, tags_file)
+#         with open(file_path, 'w', encoding='utf-8') as file:
+#             file.write(getPropertyCardDetails(card))
+#
+#     i = 1
+#     for link in links:
+#         driver.get(link)
+#         time.sleep(1)
+#         html_hotel_source = driver.page_source
+#         file_name = f'index_{i}.html'
+#         file_path = os.path.join(folder_path, file_name)
+#         with open(file_path, 'w', encoding='utf-8') as file:
+#             file.write(html_hotel_source)
+#         i += 1
+
+
+def save_property_cards_for_x_pages(date, city):
     today = datetime.today()
     date_string = today.strftime("%d-%m-%Y")
     fDate = (datetime.strptime(date[0], '%Y-%m-%d').strftime('%d-%m-%Y'),
              datetime.strptime(date[1], '%Y-%m-%d').strftime('%d-%m-%Y'))
 
-
     current_directory = os.path.dirname(os.path.abspath(__file__))
     data_directory = os.path.join(current_directory, f'../Data/{date_string}')
     city_folder_path = os.path.join(data_directory, city)
-    os.makedirs(city_folder_path, exist_ok=True)
+    os.makedirs(city_folder_path, exist_ok=True)  # Create City folder
     folder_name = f"{fDate[0]}---{fDate[1]}"
     folder_path = os.path.join(city_folder_path, folder_name)
-    os.makedirs(folder_path, exist_ok=True)
-
+    os.makedirs(folder_path, exist_ok=True)  # Create search dates folder
+    # Make file for notices container
     soup = BeautifulSoup(driver.page_source, "html.parser")
-    property_cards = soup.find_all('div', {'data-testid': 'property-card'})
-    noticesContainer = soup.find(propertyCardData[12][0], propertyCardData[12][1])
+    notices_container = soup.find(propertyCardData[12][0], propertyCardData[12][1])
     notices_file = 'Notices.txt'
     file_path = os.path.join(folder_path, notices_file)
-    if noticesContainer:
+    if notices_container:
         with open(file_path, 'a', encoding='utf-8') as file:
-            for notice in noticesContainer.contents:
+            for notice in notices_container.contents:
                 file.write(f'• {notice.text}\n')
 
-    links = []
-    for index, card in enumerate(property_cards):
-        links.append(card.find('a', {'data-testid': 'title-link'})['href'])
-        tags_file = f'index_{index + 1}_property_card.txt'
-        file_path = os.path.join(folder_path, tags_file)
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(getPropertyCardDetails(card))
 
-    i = 1
-    for link in links:
-        driver.get(link)
-        time.sleep(1)
-        html_hotel_source = driver.page_source
-        file_name = f'index_{i}.html'
-        file_path = os.path.join(folder_path, file_name)
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(html_hotel_source)
-        i += 1
+    # List of urls for pages 1-10
+    pages_urls = []
+    search_url = driver.current_url
+    for i in range(10):
+        pages_urls.append(search_url + "&offset=" + str(i*25))
 
+    # Inner function for each thread to create the property cards of their specific page
+    def event(page_url, page_number):
+        browser = webdriver.Chrome()
+        browser.get(page_url)
+        property_cards = soup.find_all('div', {'data-testid': 'property-card'})
+        for index, card in enumerate(property_cards):
+            tags_file = f'index_{(index+1)+(page_number*25)}_property_card.txt'
+            file_path = os.path.join(folder_path, tags_file)
+            with open(file_path, 'w', encoding='utf-8') as file:
+                file.write(getPropertyCardDetails(card))
+        browser.quit()
+
+    threads = []
+    for i in range(10):
+        thread = threading.Thread(target=event, args=(pages_urls[i], i) )
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 
 # Main scrape loop for the relevant dates starting from today.
 # While loop is used to search the current dates incase the popup interfered while trying to search.
 def scrape():
-    initDate = datetime.today() + timedelta(days=1) #we start to search from tomorrow bcz GMT problems
+    initDate = datetime.today() + timedelta(days=1)  # we start to search from tomorrow bcz GMT problems
     date_string = initDate.strftime("%Y-%m-%d")
     dates = generate_date_tuples(date_string)
     for city in citiesList:
-        for date in dates:
+        for date in [dates[0], dates[-1]]:
             # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
             driver.get(url)
             pop_up = True
             while pop_up:
+                # New outer try catch incase other exceptions happen -> just refresh the page.
                 try:
-                    searchDate(date[0], date[1], city)
-                    save_data_from_search_results(date, city)
-                    pop_up = False
-                except ElementClickInterceptedException:
-                    button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
-                    button = driver.find_element(By.XPATH, button_xpath)
-                    button.click()
-                    print('pop up but continued')
+                    try:
+                        searchDate(date[0], date[1], city)
+                        # save_data_from_search_results(date, city)
+                        save_property_cards_for_x_pages(date, city)
+                        pop_up = False
+                    except ElementClickInterceptedException:
+                        button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
+                        button = driver.find_element(By.XPATH, button_xpath)
+                        button.click()
+                        print('pop up but continued')
+                except Exception:
+                    driver.get(url)
 
 
 # Default URL - where we start scraping
