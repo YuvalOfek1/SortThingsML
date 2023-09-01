@@ -1,6 +1,7 @@
 import threading
 import time
 import os
+import sys
 from selenium import webdriver
 from selenium.common import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver import Keys
@@ -233,7 +234,7 @@ def save_property_cards_for_x_pages(date, city):
     fDate = (datetime.strptime(date[0], '%Y-%m-%d').strftime('%d-%m-%Y'),
              datetime.strptime(date[1], '%Y-%m-%d').strftime('%d-%m-%Y'))
 
-    current_directory = os.path.dirname(os.path.abspath(__file__))
+    current_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
     data_directory = os.path.join(current_directory, f'../Data/{date_string}')
     city_folder_path = os.path.join(data_directory, city)
     os.makedirs(city_folder_path, exist_ok=True)  # Create City folder
