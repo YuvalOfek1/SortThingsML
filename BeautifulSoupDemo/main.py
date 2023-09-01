@@ -92,7 +92,6 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
     li_element = ul_element.find_element(By.TAG_NAME, "li")
     li_element.click()
     input_element.click()
-    print('succeeded to click on city')
 
     check_in_button.click()
 
@@ -235,7 +234,7 @@ def save_property_cards_for_x_pages(date, city):
              datetime.strptime(date[1], '%Y-%m-%d').strftime('%d-%m-%Y'))
 
     current_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
-    data_directory = os.path.join(current_directory, f'../Data/{date_string}')
+    data_directory = os.path.join(current_directory, f'../Data/{date_string}---{getStartHour()}')
     city_folder_path = os.path.join(data_directory, city)
     os.makedirs(city_folder_path, exist_ok=True)  # Create City folder
     folder_name = f"{fDate[0]}---{fDate[1]}"
@@ -306,6 +305,25 @@ def scrape():
                 except Exception as e:
                     logging.error(e)
                     driver.get(url)
+
+
+# This function returns one of "04:00, 12:00, 20:00". Used with the creation of "data/{date}-{start_hour}"
+# for saving the data from 3 different searches on the same day
+def getStartHour():
+    now = datetime.now()
+    current_hour = now.hour
+    run_start_times = [4, 12, 20]
+
+    if run_start_times[0] <= current_hour < run_start_times[1]:
+        return f"{run_start_times[0]:02d}-00"
+
+    if run_start_times[1] <= current_hour < run_start_times[2]:
+        return f"{run_start_times[1]:02d}-00"
+
+    if run_start_times[2] <= current_hour or current_hour < run_start_times[0]:
+        return f"{run_start_times[2]:02d}-00"
+
+
 
 
 # Default URL - where we start scraping
