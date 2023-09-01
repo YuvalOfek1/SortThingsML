@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
+import logging
 
 citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona',
               'Las Vegas',
@@ -80,12 +81,12 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
     check_out_button = driver.find_element(By.XPATH, "//*[@data-testid='date-display-field-end']")
 
     # get the city selection input element -> clear its value and write our city
-    input_element = driver.find_element(By.XPATH, "//input[@id=':Ra9:']")
+    input_element = driver.find_element(By.XPATH, "//input[@name='ss']")
     input_element.send_keys(Keys.CONTROL + "a")  # Select all text
     input_element.send_keys(Keys.BACKSPACE)
     input_element.send_keys(cityToSearch)
     ul_element = driver.find_element(By.XPATH,
-                                     '//ul[@data-testid="autocomplete-results"]')  # the autocomplete list of cities
+                                     '//ul[@data-testid="autocomplete-results-options"]')  # the autocomplete list of cities
     time.sleep(1.5)
     li_element = ul_element.find_element(By.TAG_NAME, "li")
     li_element.click()
@@ -99,7 +100,7 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
     try:
         while True:
             prev_month_button = driver.find_element(By.XPATH, "//*[@type='button']"
-                                                    and "//*[@class='fc63351294 a822bdf511 e3c025e003 fa565176a8 cfb238afa1 c334e6f658 ae1678b153 c9fa5fc96d ab15620a33']")
+                                                    and "//*[@class='a83ed08757 c21c56c305 f38b6daa18 d691166b09 f671049264 deab83296e f4552b6561 dc72a8413c c9804790f7']")
             prev_month_button.click()
     except NoSuchElementException:
         pass
@@ -112,7 +113,7 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
             break
         except NoSuchElementException:
             next_month_button = driver.find_element(By.XPATH, "//*[@type='button']"
-                                                    and "//*[@class='fc63351294 a822bdf511 e3c025e003 fa565176a8 cfb238afa1 c334e6f658 ae1678b153 c9fa5fc96d be298b15fa']")
+                                                    and "//*[@class='a83ed08757 c21c56c305 f38b6daa18 d691166b09 f671049264 deab83296e f4552b6561 dc72a8413c f073249358']")
             next_month_button.click()
 
     try:
@@ -131,7 +132,7 @@ def searchDate(checkInDate, checkOutDate, cityToSearch):
 
     try:
         search_button = driver.find_element(By.XPATH, "//*[@type='submit']"
-                                            and "//*[@class='fc63351294 a822bdf511 d4b6b7a9e7 cfb238afa1 c938084447 f4605622ad aa11d0d5cd']")
+                                            and "//*[@class='a83ed08757 c21c56c305 a4c1805887 f671049264 d2529514af c082d89982 aa11d0d5cd']")
 
     except NoSuchElementException:
         search_button = driver.find_element(By.XPATH, "//*[@type='submit']"
@@ -249,12 +250,11 @@ def save_property_cards_for_x_pages(date, city):
             for notice in notices_container.contents:
                 file.write(f'• {notice.text}\n')
 
-
     # List of urls for pages 1-10
     pages_urls = []
     search_url = driver.current_url
     for i in range(10):
-        pages_urls.append(search_url + "&offset=" + str(i*25))
+        pages_urls.append(search_url + "&offset=" + str(i * 25))
 
     # Inner function for each thread to create the property cards of their specific page
     def event(page_url, page_number):
@@ -262,7 +262,7 @@ def save_property_cards_for_x_pages(date, city):
         browser.get(page_url)
         property_cards = soup.find_all('div', {'data-testid': 'property-card'})
         for index, card in enumerate(property_cards):
-            tags_file = f'index_{(index+1)+(page_number*25)}_property_card.txt'
+            tags_file = f'index_{(index + 1) + (page_number * 25)}_property_card.txt'
             file_path = os.path.join(folder_path, tags_file)
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.write(getPropertyCardDetails(card))
@@ -270,12 +270,13 @@ def save_property_cards_for_x_pages(date, city):
 
     threads = []
     for i in range(10):
-        thread = threading.Thread(target=event, args=(pages_urls[i], i) )
+        thread = threading.Thread(target=event, args=(pages_urls[i], i))
         threads.append(thread)
         thread.start()
 
     for thread in threads:
         thread.join()
+
 
 # Main scrape loop for the relevant dates starting from today.
 # While loop is used to search the current dates incase the popup interfered while trying to search.
@@ -284,7 +285,7 @@ def scrape():
     date_string = initDate.strftime("%Y-%m-%d")
     dates = generate_date_tuples(date_string)
     for city in citiesList:
-        for date in [dates[0], dates[-1]]:
+        for date in dates:
             # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
             driver.get(url)
             pop_up = True
@@ -296,12 +297,13 @@ def scrape():
                         # save_data_from_search_results(date, city)
                         save_property_cards_for_x_pages(date, city)
                         pop_up = False
-                    except ElementClickInterceptedException:
+                    except ElementClickInterceptedException as e:
                         button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
                         button = driver.find_element(By.XPATH, button_xpath)
                         button.click()
-                        print('pop up but continued')
-                except Exception:
+
+                except Exception as e:
+                    logging.error(e)
                     driver.get(url)
 
 
@@ -314,5 +316,8 @@ driver.get(url)
 
 # set implicit wait time to 2 seconds
 driver.implicitly_wait(2)
+
+# Configure the logging system to write to a file
+logging.basicConfig(filename='error_log.txt', level=logging.ERROR)
 
 scrape()
