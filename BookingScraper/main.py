@@ -228,14 +228,14 @@ def save_property_cards_for_x_pages(date, city):
     opened_tabs = []
 
     async def open_tabs():
-        for url in pages_urls[:1]:
+        for url in pages_urls:
             driver.execute_script(f'window.open("{url}");')
             opened_tabs.append(driver.window_handles[-1])
 
     asyncio.new_event_loop().run_until_complete(open_tabs())
 
     # Process the data from the first to the last tab after the loading has completed
-    for i in range(1):
+    for i in range(10):
         process_page(i)
 
     for i in reversed(range(1, 11)):
