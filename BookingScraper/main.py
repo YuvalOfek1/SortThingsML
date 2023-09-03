@@ -1,6 +1,7 @@
 import time
 import os
 import sys
+
 from selenium import webdriver
 from selenium.common import NoSuchElementException, ElementClickInterceptedException
 from selenium.webdriver import Keys
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import logging
+from fake_useragent import UserAgent
 
 citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Hanoi']
 propertyCardData = [
@@ -232,15 +234,19 @@ def save_property_cards_for_x_pages(date, city):
             driver.execute_script(f'window.open("{url}");')
             opened_tabs.append(driver.window_handles[-1])
 
+        time.sleep(1.5)
+
     asyncio.new_event_loop().run_until_complete(open_tabs())
 
     # Process the data from the first to the last tab after the loading has completed
     for i in range(10):
         process_page(i)
 
-    for i in reversed(range(1, 11)):
-        driver.switch_to.window(driver.window_handles[i])
-        driver.close()
+    curr = driver.current_window_handle
+    for handle in driver.window_handles:
+        driver.switch_to.window(handle)
+        if handle != curr:
+            driver.close()
 
 
 # Main scrape loop for the relevant dates starting from today.
@@ -294,12 +300,28 @@ def getStartHour():
 bookingHomePage = 'https://www.booking.com/'
 
 # set up selenium driver
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument('--disable-popup-blocking')
-chrome_options.add_argument('--blink-settings=imagesEnabled=false'
-                            '')
-driver = webdriver.Chrome(options=chrome_options)
+options = webdriver.ChromeOptions()
 
+options.add_argument("--headless")
+options.add_argument("--incognito")
+options.add_argument("--enable-javascript")
+options.add_argument("--disable-blink-features")
+options.add_argument("--disable-blink-features=AutomationControlled")
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920x1080")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--no-sandbox")
+
+options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.141 Safari/537.36')
+
+driver = webdriver.Chrome(options=options)
+driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+  "source": """
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => undefined
+    })
+  """
+})
 # set implicit wait time to 2 seconds
 driver.implicitly_wait(2)
 
