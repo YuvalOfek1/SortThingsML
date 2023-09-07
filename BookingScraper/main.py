@@ -7,13 +7,12 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import asyncio
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import re
 import logging
 
-citiesList = ['Tokyo', 'Berlin', 'New York', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Hanoi']
+citiesList = ['New York', 'Tokyo', 'Berlin', 'Madrid', 'Milano', 'Tel Aviv', 'Rome', 'Amsterdam', 'Barcelona', 'Hanoi']
 propertyCardData = [
     ('div', {'data-testid': 'title'}),
     ('span', {'data-testid': 'address'}),
@@ -22,7 +21,7 @@ propertyCardData = [
     ('span', {'class': 'b30f8eb2d6'}),  # promotional stuff (newToBooking, getawayDeal, promoted, sustainability etc...)
     ('div', {'data-testid': 'review-score'}),  # Reviews
     ('a', {'data-testid': 'secondary-review-score-link'}),  # location: rank
-    ('div', {'data-testid': 'recommended-units'}),  # Reviews
+    ('div', {'data-testid': 'recommended-units'}),  # Recommended Units
     ('div', {'data-testid': 'price-for-x-nights'}),  # nights and adults: x nights y adults
     ('span', {'data-testid': 'price-and-discounted-price'}),  # price
     ('div', {'data-testid': 'taxes-and-charges'}),  # taxes-and-charges
@@ -33,24 +32,26 @@ propertyCardData = [
 
 
 def getPropertyCardDetails(card):
-    name =              card.find(propertyCardData[0][0], propertyCardData[0][1])  # title
-    address =           card.find(propertyCardData[1][0], propertyCardData[1][1])  # address
-    distance =          card.find(propertyCardData[2][0], propertyCardData[2][1])  # distance
-    subwayAccess =      card.find(propertyCardData[3][0], propertyCardData[3][1])  # subway access
-    promotionalStuff =  card.findAll(propertyCardData[4][0], propertyCardData[4][1])
-    numOfReviews =      card.find(propertyCardData[5][0], propertyCardData[5][1])  # review-score
-    locationRank =      card.find(propertyCardData[6][0], propertyCardData[6][1])  # secondary-review-score-link
+    name = card.find(propertyCardData[0][0], propertyCardData[0][1])  # title
+    address = card.find(propertyCardData[1][0], propertyCardData[1][1])  # address
+    distance = card.find(propertyCardData[2][0], propertyCardData[2][1])  # distance
+    subwayAccess = card.find(propertyCardData[3][0], propertyCardData[3][1])  # subway access
+    promotionalStuff = card.findAll(propertyCardData[4][0], propertyCardData[4][1])
+    numOfReviews = card.find(propertyCardData[5][0], propertyCardData[5][1])  # review-score
+    locationRank = card.find(propertyCardData[6][0], propertyCardData[6][1])  # secondary-review-score-link
 
-    unit =              card.find(propertyCardData[7][0], propertyCardData[7][1]).find('span', {'class': 'df597226dd'})  # Room details
-    bed =               card.find(propertyCardData[7][0], propertyCardData[7][1]).find('div', {'class': 'cb5b4b68a4'})  # Bed details
-    roomsLeft =         card.find(propertyCardData[7][0], propertyCardData[7][1]).find('div', {'class': 'cb1f9edcd4'})  # Rooms left details
+    recommendedUnit = card.find(propertyCardData[7][0], propertyCardData[7][1])
+    if recommendedUnit:
+        unit = card.find(propertyCardData[7][0], propertyCardData[7][1]).find('span', {'class': 'df597226dd'})  # Room details
+        bed = card.find(propertyCardData[7][0], propertyCardData[7][1]).find('div', {'class': 'cb5b4b68a4'})  # Bed details
+        roomsLeft = card.find(propertyCardData[7][0], propertyCardData[7][1]).find('div', {'class': 'cb1f9edcd4'})  # Rooms left details
 
-    xNightsAndAdults =  card.find(propertyCardData[8][0], propertyCardData[8][1])  # price-for-x-nights
-    price =             card.find(propertyCardData[9][0], propertyCardData[9][1])  # price-and-discounted-price
-    taxesAndCharges =   card.find(propertyCardData[10][0], propertyCardData[10][1])  # taxes-and-charges
-    stars =             card.find(propertyCardData[11][0], propertyCardData[11][1])  # class: e4755bbd60
-    circles =           card.find(propertyCardData[12][0], propertyCardData[12][1])
-    preferredBadge =    card.find(propertyCardData[13][0], propertyCardData[13][1])
+    xNightsAndAdults = card.find(propertyCardData[8][0], propertyCardData[8][1])  # price-for-x-nights
+    price = card.find(propertyCardData[9][0], propertyCardData[9][1])  # price-and-discounted-price
+    taxesAndCharges = card.find(propertyCardData[10][0], propertyCardData[10][1])  # taxes-and-charges
+    stars = card.find(propertyCardData[11][0], propertyCardData[11][1])  # class: e4755bbd60
+    circles = card.find(propertyCardData[12][0], propertyCardData[12][1])
+    preferredBadge = card.find(propertyCardData[13][0], propertyCardData[13][1])
 
     result = ''
     result += f'Name: {name.text.strip()}\n'
@@ -65,7 +66,8 @@ def getPropertyCardDetails(card):
     else:
         'Reviews: No reviews yet\n'
     result += f'{locationRank.attrs["aria-label"]}\n' if locationRank else 'Location: Unranked\n'
-    result += f'Recommended Unit: {unit.text}, {bed.text}, {roomsLeft.text}\n' if roomsLeft else f'Recommended Unit: {unit.text}, {bed.text}\n'
+    if recommendedUnit:
+        result += f'Recommended Unit: {unit.text}, {bed.text}, {roomsLeft.text}\n' if roomsLeft else f'Recommended Unit: {unit.text}, {bed.text}\n'
     result += f'Nights and Adults: {xNightsAndAdults.text.strip()}\n' if xNightsAndAdults else f'Nights and Adults: '
     result += f'Price: {price.text.strip()}\n' if price else 'Price: No price\n'
     result += f'Taxes and Charges: {taxesAndCharges.text}\n'
@@ -185,6 +187,23 @@ def generate_date_tuples(date_str):
     return date_tuples
 
 
+# This function returns one of "04:00, 12:00, 20:00". Used with the creation of "data/{date}-{start_hour}"
+# for saving the data from 3 different searches on the same day
+def getStartHour():
+    now = datetime.now()
+    current_hour = now.hour
+    run_start_times = [4, 12, 20]
+
+    if run_start_times[0] <= current_hour < run_start_times[1]:
+        return f"{run_start_times[0]:02d}-00"
+
+    if run_start_times[1] <= current_hour < run_start_times[2]:
+        return f"{run_start_times[1]:02d}-00"
+
+    if run_start_times[2] <= current_hour or current_hour < run_start_times[0]:
+        return f"{run_start_times[2]:02d}-00"
+
+
 def save_property_cards_for_x_pages(date, city):
     today = datetime.today()
     date_string = today.strftime("%d-%m-%Y")
@@ -214,7 +233,6 @@ def save_property_cards_for_x_pages(date, city):
     for i in range(10):
         pages_urls.append(search_url + "&offset=" + str(i * 25))
 
-    # Inner function for each thread to create the property cards of their specific page
     def process_page(page_number):
         driver.switch_to.window(opened_tabs[page_number])
         current_page = BeautifulSoup(driver.page_source, "html.parser")
@@ -225,22 +243,21 @@ def save_property_cards_for_x_pages(date, city):
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.write(getPropertyCardDetails(card))
 
+    # Keep track of opened tabs, process each tab and close all the opened tabs.
     opened_tabs = []
+    for url in pages_urls:
+        driver.execute_script(f'window.open("{url}");')
+        opened_tabs.append(driver.window_handles[-1])
 
-    async def open_tabs():
-        for url in pages_urls:
-            driver.execute_script(f'window.open("{url}");')
-            opened_tabs.append(driver.window_handles[-1])
-
-    asyncio.new_event_loop().run_until_complete(open_tabs())
-
-    # Process the data from the first to the last tab after the loading has completed
     for i in range(10):
         process_page(i)
 
-    for i in reversed(range(1, 11)):
+    for i in reversed(range(1, len(driver.window_handles))):
         driver.switch_to.window(driver.window_handles[i])
         driver.close()
+
+    driver.switch_to.window(driver.window_handles[0])
+    print(f"finished scraping {city} for dates: {date}")
 
 
 # Main scrape loop for the relevant dates starting from today.
@@ -252,7 +269,6 @@ def scrape():
     for city in citiesList:
         for date in dates:
             # Go back to the original page we started searching from, removes the need of handling multiple cases for random stuff that happens...
-            driver.switch_to.window(driver.window_handles[0])
             driver.get(bookingHomePage)
             pop_up = True
             while pop_up:
@@ -263,31 +279,14 @@ def scrape():
                         # save_data_from_search_results(date, city)
                         save_property_cards_for_x_pages(date, city)
                         pop_up = False
-                    except ElementClickInterceptedException as e:
+                    except ElementClickInterceptedException:
                         button_xpath = '//button[@aria-label="Dismiss sign-in info."]'
                         button = driver.find_element(By.XPATH, button_xpath)
                         button.click()
 
-                except Exception as e:
-                    logging.error(e)
+                except Exception:
+                    logging.error("An error occurred:", exc_info=True)
                     driver.get(bookingHomePage)
-
-
-# This function returns one of "04:00, 12:00, 20:00". Used with the creation of "data/{date}-{start_hour}"
-# for saving the data from 3 different searches on the same day
-def getStartHour():
-    now = datetime.now()
-    current_hour = now.hour
-    run_start_times = [4, 12, 20]
-
-    if run_start_times[0] <= current_hour < run_start_times[1]:
-        return f"{run_start_times[0]:02d}-00"
-
-    if run_start_times[1] <= current_hour < run_start_times[2]:
-        return f"{run_start_times[1]:02d}-00"
-
-    if run_start_times[2] <= current_hour or current_hour < run_start_times[0]:
-        return f"{run_start_times[2]:02d}-00"
 
 
 # Default URL - where we start scraping

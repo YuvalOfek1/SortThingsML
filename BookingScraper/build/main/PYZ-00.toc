@@ -1,4 +1,4 @@
-('C:\\Users\\liavb\\Desktop\\School\\SortThingsML\\BookingScraper\\build\\main\\PYZ-00.pyz',
+('C:\\Users\\liavb\\Desktop\\School\\SortThingsML\\bookingscraper\\build\\main\\PYZ-00.pyz',
  [('__future__',
    'C:\\Users\\liavb\\AppData\\Local\\Programs\\Python\\Python310\\lib\\__future__.py',
    'PYMODULE'),
